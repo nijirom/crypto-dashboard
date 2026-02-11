@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="Live Crypto Breakout Dashboard", layout="wide")
 
 # Auto-refresh every 60 seconds (60000 ms)
-st_autorefresh(interval=60_000, limit=None, key="live_refresh")
+st_autorefresh(interval=30_000, limit=None, key="live_refresh")
 
 # Dense, terminal-style CSS
 st.markdown("""
@@ -38,7 +38,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Breakout Dashboard — Live CoinGecko Data")
+st.title("Breakout Dashboard")
 
 
 # ── Data Fetching ───────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ def create_bar(
 
 # ── Dashboard Layout ────────────────────────────────────────────────────────
 # Refresh button (clears the 5-min cache immediately)
-st.button("🔄 Refresh Data Now", on_click=st.cache_data.clear)
+st.button("Refresh Data Now", on_click=st.cache_data.clear)
 
 # ── ROW 1 — Market Overview Scatter Plots ───────────────────────────────────
 r1c1, r1c2, r1c3, r1c4 = st.columns(4)
@@ -283,4 +283,4 @@ with r3c4:
     )
 
 # ── Footer ──────────────────────────────────────────────────────────────────
-st.caption("Data auto-refreshes every 60 seconds · Source: CoinGecko Public API")
+st.caption("Data auto-refreshes every 30 seconds · Source: CoinGecko Public API")
