@@ -5,10 +5,10 @@ import plotly.express as px
 import requests
 from streamlit_autorefresh import st_autorefresh
 
-# ── Page Configuration ──────────────────────────────────────────────────────
+# Page Configuration
 st.set_page_config(page_title="Live Crypto Breakout Dashboard", layout="wide")
 
-# Auto-refresh every 60 seconds (60000 ms)
+# Auto-refresh every 30 seconds (30000 ms)
 st_autorefresh(interval=30_000, limit=None, key="live_refresh")
 
 # Dense, terminal-style CSS
@@ -41,7 +41,7 @@ st.markdown("""
 st.title("Breakout Dashboard")
 
 
-# ── Data Fetching ───────────────────────────────────────────────────────────
+# Data Fetching
 @st.cache_data(ttl=300)  # Cache for 5 minutes to respect API rate limits
 def fetch_coingecko_data() -> pd.DataFrame:
     """
@@ -64,12 +64,12 @@ def fetch_coingecko_data() -> pd.DataFrame:
         data = response.json()
 
         if not isinstance(data, list) or len(data) == 0:
-            st.warning("⚠ CoinGecko returned unexpected data. Falling back to mock data.")
-            return _generate_fallback_data()
+            st.error("⚠ CoinGecko returned unexpected data. Please try again later.")
+            st.stop()
 
         df = pd.DataFrame(data)
 
-        # ── Map columns ─────────────────────────────────────────────────
+        # Map columns
         df["Ticker"] = df["symbol"].str.upper()
         df["Price Change 1D%"] = pd.to_numeric(
             df["price_change_percentage_24h_in_currency"], errors="coerce"
@@ -79,7 +79,7 @@ def fetch_coingecko_data() -> pd.DataFrame:
         ).fillna(0)
         df["Volume"] = pd.to_numeric(df["total_volume"], errors="coerce").fillna(0)
 
-        # ── Z-Scores ────────────────────────────────────────────────────
+        # Z-Scores
         def zscore(series: pd.Series) -> pd.Series:
             std = series.std()
             if std == 0:
@@ -89,59 +89,31 @@ def fetch_coingecko_data() -> pd.DataFrame:
         df["Price Z-Score 1D"] = zscore(df["Price Change 1D%"])
         df["OI Z-Score 1D"] = zscore(df["Volume"])  # Volume as OI proxy
 
-        # ── Relative Strength (momentum blend) ──────────────────────────
+        # Relative Strength (momentum blend)
         df["Relative Strength"] = (
             df["Price Change 1D%"] * 0.4 + df["Price Change 1W%"] * 0.6
         )
         df["Relative Strength Z-Score 1D"] = zscore(df["Relative Strength"])
 
-        # ── Forecast proxies ────────────────────────────────────────────
+        # Forecast proxies
         df["Volatility Breakout"] = df["Price Change 1D%"].abs()
         df["Composite Forecast"] = (df["OI Z-Score 1D"] + df["Price Z-Score 1D"]) / 2
         df["HTF-Breakout Forecast"] = df["Price Change 1W%"]
 
-        # Carry & Funding APR are not publicly available; simulate for layout
-        rng = np.random.default_rng(seed=42)
-        df["Carry Forecast"] = rng.normal(0, 5, len(df))
-        df["Funding APR%"] = rng.normal(10, 5, len(df))
-
-        # ── Signal flag for scatter coloring ────────────────────────────
+        # Signal flag for scatter coloring
         df["Signal"] = np.where(df["Composite Forecast"] > 1.0, "High", "Normal")
 
         return df
 
     except Exception as exc:
-        st.warning(f"⚠ API error: {exc}. Falling back to mock data.")
-        return _generate_fallback_data()
-
-
-def _generate_fallback_data(n: int = 60) -> pd.DataFrame:
-    """Return realistic-looking mock data when the API is unavailable."""
-    rng = np.random.default_rng(seed=42)
-    tickers = [f"COIN{i}" for i in range(n)]
-    real = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "DOT", "LINK", "MATIC"]
-    tickers[: len(real)] = real
-
-    df = pd.DataFrame({"Ticker": tickers})
-    df["Price Change 1D%"] = rng.normal(0, 5, n)
-    df["Price Change 1W%"] = rng.normal(0, 15, n)
-    df["Price Z-Score 1D"] = rng.normal(0, 1.5, n)
-    df["OI Z-Score 1D"] = rng.normal(0, 1.5, n)
-    df["Relative Strength Z-Score 1D"] = rng.normal(0, 1.5, n)
-    df["Funding APR%"] = rng.normal(10, 5, n)
-    df["Composite Forecast"] = rng.normal(0, 3, n)
-    df["Volatility Breakout"] = rng.uniform(0, 10, n)
-    df["HTF-Breakout Forecast"] = rng.normal(0, 8, n)
-    df["Carry Forecast"] = rng.normal(0, 5, n)
-    df["Relative Strength"] = rng.uniform(-20, 40, n)
-    df["Signal"] = np.where(df["Composite Forecast"] > 3, "High", "Normal")
-    return df
+        st.error(f"⚠ API error: {exc}. Please try again later.")
+        st.stop()
 
 
 df = fetch_coingecko_data()
 
 
-# ── Chart Builder: Scatter ──────────────────────────────────────────────────
+# Chart Builder: Scatter
 def create_scatter(
     data: pd.DataFrame,
     x_col: str,
@@ -173,7 +145,7 @@ def create_scatter(
     return fig
 
 
-# ── Chart Builder: Horizontal Bar ──────────────────────────────────────────
+# Chart Builder: Horizontal Bar
 def create_bar(
     data: pd.DataFrame,
     x_col: str,
@@ -201,12 +173,12 @@ def create_bar(
     return fig
 
 
-# ── Dashboard Layout ────────────────────────────────────────────────────────
+# Dashboard Layout
 # Refresh button (clears the 5-min cache immediately)
 st.button("Refresh Data Now", on_click=st.cache_data.clear)
 
-# ── ROW 1 — Market Overview Scatter Plots ───────────────────────────────────
-r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+# ROW 1 Market Overview Scatter Plots
+r1c1, r1c2, r1c3 = st.columns(3)
 with r1c1:
     st.plotly_chart(
         create_scatter(df, "Price Change 1W%", "Price Change 1D%", "Price Change"),
@@ -224,14 +196,9 @@ with r1c3:
         ),
         use_container_width=True,
     )
-with r1c4:
-    st.plotly_chart(
-        create_scatter(df, "Funding APR%", "Price Z-Score 1D", "Funding APR"),
-        use_container_width=True,
-    )
 
-# ── ROW 2 — Breakout Forecast Scatter Plots ────────────────────────────────
-r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+# ROW 2 — Breakout Forecast Scatter Plots
+r2c1, r2c2, r2c3 = st.columns(3)
 with r2c1:
     st.plotly_chart(
         create_scatter(df, "Composite Forecast", "Price Z-Score 1D", "Composite Breakout"),
@@ -251,13 +218,8 @@ with r2c3:
         ),
         use_container_width=True,
     )
-with r2c4:
-    st.plotly_chart(
-        create_scatter(df, "Carry Forecast", "Price Z-Score 1D", "Carry (Simulated)"),
-        use_container_width=True,
-    )
 
-# ── ROW 3 — Ranking Bar Charts ─────────────────────────────────────────────
+# ROW 3 Ranking Bar Charts
 r3c1, r3c2, r3c3, r3c4 = st.columns(4)
 with r3c1:
     st.plotly_chart(
@@ -282,5 +244,5 @@ with r3c4:
         use_container_width=True,
     )
 
-# ── Footer ──────────────────────────────────────────────────────────────────
+# Footer
 st.caption("Data auto-refreshes every 30 seconds · Source: CoinGecko Public API")
