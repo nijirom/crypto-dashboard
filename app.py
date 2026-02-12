@@ -139,7 +139,7 @@ def create_scatter(
         margin=dict(l=20, r=20, t=40, b=20),
         height=300,
         font=dict(size=10),
-        title_font=dict(size=13, family="Arial", color="#white"),
+        title_font=dict(size=13, family="Arial", color="#FFFFFF"),
     )
     fig.update_traces(marker=dict(size=7, opacity=0.85))
     return fig
@@ -168,7 +168,7 @@ def create_bar(
         height=520,
         yaxis=dict(title=None, tickfont=dict(size=9)),
         xaxis=dict(title=None),
-        title_font=dict(size=13, family="Arial", color="#white"),
+        title_font=dict(size=13, family="Arial", color="#FFFFFF"),
     )
     return fig
 
