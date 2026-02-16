@@ -11,7 +11,7 @@ st.set_page_config(page_title="Live Crypto Breakout Dashboard", layout="wide")
 # Auto-refresh every 30 seconds (30000 ms)
 st_autorefresh(interval=30_000, limit=None, key="live_refresh")
 
-# Dense, terminal-style CSS
+# CSS
 st.markdown("""
 <style>
     .block-container {
@@ -42,7 +42,7 @@ st.title("Breakout Dashboard")
 
 
 # Data Fetching
-@st.cache_data(ttl=300)  # Cache for 5 minutes to respect API rate limits
+@st.cache_data(ttl=480)  # Cache for 8 minutes 
 def fetch_coingecko_data() -> pd.DataFrame:
     """
     Fetch the top 100 cryptocurrencies from CoinGecko and calculate
@@ -64,7 +64,7 @@ def fetch_coingecko_data() -> pd.DataFrame:
         data = response.json()
 
         if not isinstance(data, list) or len(data) == 0:
-            st.error("⚠ CoinGecko returned unexpected data. Please try again later.")
+            st.error("CoinGecko returned unexpected data. Please try again later.")
             st.stop()
 
         df = pd.DataFrame(data)
@@ -106,7 +106,7 @@ def fetch_coingecko_data() -> pd.DataFrame:
         return df
 
     except Exception as exc:
-        st.error(f"⚠ API error: {exc}. Please try again later.")
+        st.error(f"API error: {exc}. Please try again later.")
         st.stop()
 
 
